@@ -86,7 +86,7 @@ if ( in_array( 'woocommerce-force-sells/woocommerce-force-sells.php', apply_filt
 			echo ' checked';}
 		?>
 		>
-		<label for="ofs_enabled"><?php _e( 'Optional Force Sells', 'woocommerce-optional-force-sells' ); ?></label>
+		<label for="ofs_enabled"><?php esc_html_e( 'Optional Force Sells', 'woocommerce-optional-force-sells' ); ?></label>
 		<?php echo wc_help_tip( __( 'When checked, force sells on this product will appear on the product page with checkboxes. Only checked force sells will be added to the cart.', 'woocommerce-optional-force-sells' ) ); ?>
 	</p>
 		<?php
