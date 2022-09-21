@@ -14,7 +14,7 @@
  */
 
 // Only run if Force Sells is active.
-if ( in_array( 'woocommerce-force-sells/woocommerce-force-sells.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+if ( class_defined() in_array( 'woocommerce-force-sells/woocommerce-force-sells.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 
 	add_action(
 		'wp_head', function () {
