@@ -3,7 +3,7 @@
  * Plugin Name:       Optional Force Sells
  * Plugin URI:        https://github.com/melek/optional-force-sells/
  * Description:       Extends WooCommerce Force Sells by allowing force sells on a product to be optional.
- * Version:           0.1.6
+ * Version:           1.0a
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Lionel Di Giacomo
@@ -14,18 +14,19 @@
  */
 
 // Only run if Force Sells is active.
-if ( class_defined() in_array( 'woocommerce-force-sells/woocommerce-force-sells.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-
-	add_action(
-		'wp_head', function () {
-			echo '<style>.ofs-container { padding-bottom: 1.5rem; }</style>';
-		}
-	);   // A bit of custom CSS
+if ( class_exists( 'WC_Force_Sells' ) ) {
 	add_action( 'woocommerce_before_add_to_cart_button', 'ofs_synced_product_add_ons', 9 );      // Front end: Show custom input field above Add to Cart
 	add_filter( 'woocommerce_add_cart_item_data', 'ofs_product_add_on_cart_item_data', 10, 2 );   // Save custom input field value into cart item data
 	add_filter( 'wc_force_sell_add_to_cart_product', 'ofs_filter_forced_sells', 10, 2 );      // Make sure the selected IDs are the only force-sells added to the cart
 	add_action( 'woocommerce_product_options_related', 'ofs_write_panel_tab', 11 );             // Render Optional Force Sells checkbox in Linked Products tab.
 	add_action( 'woocommerce_process_product_meta', 'ofs_process_extra_product_meta', 1, 2 );   // Save Optional Force Sell option in post meta when product is saved.
+	add_action(
+		'wp_head',
+		function () {
+			// A bit of custom CSS.
+			echo '<style>.ofs-container { padding-bottom: 1.5rem; }</style>';
+		}
+	);
 
 	function ofs_synced_product_add_ons() {
 		if ( ! get_post_meta( get_the_ID(), 'ofs_enabled', false ) ) {
@@ -34,7 +35,7 @@ if ( class_defined() in_array( 'woocommerce-force-sells/woocommerce-force-sells.
 
 		// Remove the default single product display of force-sells
 		remove_action( 'woocommerce_after_add_to_cart_button', array( WC_Force_Sells::get_instance(), 'show_force_sell_products' ) );
-		echo '<div class="wc-force-sells ofs-container">' . esc_html__( 'Options', 'woocommerce-optional-force-sells' );
+		echo '<div class="wc-force-sells ofs-container">' . wp_kses_post( __( 'Options', 'woocommerce-optional-force-sells' ) );
 		$fs_ids = ofs_get_force_sell_ids( get_the_ID(), array( 'normal', 'synced' ) );
 		foreach ( $fs_ids as $fs_id ) {
 			$fs_product = wc_get_product( $fs_id );
@@ -45,7 +46,7 @@ if ( class_defined() in_array( 'woocommerce-force-sells/woocommerce-force-sells.
 				esc_attr( 'ofs_option_' . $fs_id ),
 				esc_attr( $fs_id ),
 				esc_attr( 'ofs_option_' . $fs_id ),
-				sanitize_text_field( $fs_product->get_title() ),
+				wp_kses_post( __( $fs_product->get_title() ) ),
 				$fs_product->get_price_html()
 			);
 		}
@@ -67,11 +68,12 @@ if ( class_defined() in_array( 'woocommerce-force-sells/woocommerce-force-sells.
 
 		// If optional force sells are present, allow main products to be added even if force sells aren't.
 		add_filter(
-			'wc_force_sell_disallow_no_stock', function( $data ) {
+			'wc_force_sell_disallow_no_stock',
+			function( $data ) {
 				return false;
 			}
 		);
-		if ( ! in_array( $params['id'], $cart_item['ofs_selected_force_sells'] ) ) {
+		if ( ! in_array( $params['id'], $cart_item['ofs_selected_force_sells'], false ) ) {
 			$params['id'] = null;
 		}
 		return $params;
