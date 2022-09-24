@@ -13,13 +13,12 @@
  * Text Domain:       woocommerce-optional-force-sells
  */
 
-// Only run if Force Sells is active.
-if ( class_exists( 'WC_Force_Sells' ) ) {
-	add_action( 'woocommerce_before_add_to_cart_button', 'ofs_synced_product_add_ons', 9 );      // Front end: Show custom input field above Add to Cart
-	add_filter( 'woocommerce_add_cart_item_data', 'ofs_product_add_on_cart_item_data', 10, 2 );   // Save custom input field value into cart item data
-	add_filter( 'wc_force_sell_add_to_cart_product', 'ofs_filter_forced_sells', 10, 2 );      // Make sure the selected IDs are the only force-sells added to the cart
-	add_action( 'woocommerce_product_options_related', 'ofs_write_panel_tab', 11 );             // Render Optional Force Sells checkbox in Linked Products tab.
-	add_action( 'woocommerce_process_product_meta', 'ofs_process_extra_product_meta', 1, 2 );   // Save Optional Force Sell option in post meta when product is saved.
+if ( class_exists( 'WC_Force_Sells' ) && class_exists( 'WooCommerce' ) ) {
+	add_action( 'woocommerce_before_add_to_cart_button', 'ofs_synced_product_add_ons', 9 );     // Front end: Show custom input field above Add to Cart
+	add_filter( 'woocommerce_add_cart_item_data', 'ofs_product_add_on_cart_item_data', 10, 2 ); // Save custom input field value into cart item data
+	add_filter( 'wc_force_sell_add_to_cart_product', 'ofs_filter_forced_sells', 10, 2 );        // Make sure the selected IDs are the only force-sells added to the cart
+	add_action( 'woocommerce_product_options_related', 'ofs_display_options', 11 );                     // Render Optional Force Sells checkbox in Linked Products tab.
+	add_action( 'woocommerce_admin_process_product_object', 'ofs_save_options', 1 );              // Save Optional Force Sell option in post meta when product is saved.
 	add_action(
 		'wp_head',
 		function () {
@@ -46,8 +45,8 @@ if ( class_exists( 'WC_Force_Sells' ) ) {
 				esc_attr( 'ofs_option_' . $fs_id ),
 				esc_attr( $fs_id ),
 				esc_attr( 'ofs_option_' . $fs_id ),
-				wp_kses_post( __( $fs_product->get_title() ) ),
-				$fs_product->get_price_html()
+				wp_kses_post( wp_unslash( $fs_product->get_title() ) ),
+				wp_kses_post( wp_unslash( $fs_product->get_price_html() ) ),
 			);
 		}
 		echo '<input type="hidden" name="ofs_selected_force_sells[]" value="">';
@@ -55,8 +54,8 @@ if ( class_exists( 'WC_Force_Sells' ) ) {
 	}
 
 	function ofs_product_add_on_cart_item_data( $cart_item, $product_id ) {
-		if ( isset( $_POST['ofs_selected_force_sells'] ) ) {
-			$cart_item['ofs_selected_force_sells'] = $_POST['ofs_selected_force_sells'];
+		if ( ! empty( $_POST['ofs_selected_force_sells'] ) ) {
+			$cart_item['ofs_selected_force_sells'] = array_map( 'intval', (array) $_POST['ofs_selected_force_sells'] );
 		}
 		return $cart_item;
 	}
@@ -79,26 +78,23 @@ if ( class_exists( 'WC_Force_Sells' ) ) {
 		return $params;
 	}
 
-	function ofs_write_panel_tab() {
-		?>
-	<p class="form-field">
-		<input id="ofs_enabled" type="checkbox" name="ofs_enabled"
-		<?php
-		if ( get_post_meta( get_the_ID(), 'ofs_enabled', true ) ) {
-			echo ' checked';}
-		?>
-		>
-		<label for="ofs_enabled"><?php esc_html_e( 'Optional Force Sells', 'woocommerce-optional-force-sells' ); ?></label>
-		<?php echo wc_help_tip( __( 'When checked, force sells on this product will appear on the product page with checkboxes. Only checked force sells will be added to the cart.', 'woocommerce-optional-force-sells' ) ); ?>
-	</p>
-		<?php
+	function ofs_display_options() {
+		woocommerce_wp_checkbox(
+			array(
+				'id'          => 'ofs_enabled',
+				'label'       => __( 'Optional Force Sells', 'woocommerce-optional-force-sells' ),
+				'value'       => get_post_meta( get_the_ID(), 'ofs_enabled', true ) ? 'yes' : 'no',
+				'description' => __( 'Allow customers to opt into force sells on the Single Product page.', 'woocommerce-optional-force-sells' ),
+				'desc_tip'    => true,
+			)
+		);
 	}
 
-	function ofs_process_extra_product_meta( $post_id, $post ) {
-		if ( isset( $_POST['ofs_enabled'] ) ) {
-			update_post_meta( $post_id, 'ofs_enabled', true );
+	function ofs_save_options( $product ) {
+		if ( ! empty( $_POST['ofs_enabled'] ) ) {
+			$product->update_meta_data( 'ofs_enabled', true );
 		} else {
-			delete_post_meta( $post_id, 'ofs_enabled' );
+			$product->delete_meta_data( 'ofs_enabled' );
 		}
 	}
 
